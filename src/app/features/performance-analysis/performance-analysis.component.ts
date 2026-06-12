@@ -1,0 +1,103 @@
+import { Component, Input, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { PerformanceAudit } from '../../core/models/audit.models';
+
+@Component({
+  selector: 'app-performance-analysis',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="perf-section">
+      <h3 class="section-title">Performance Analysis</h3>
+      <div class="audit-list">
+        @for (audit of audits; track audit.id) {
+          <div class="card audit-item" [class.expanded]="expandedId() === audit.id" (click)="toggle(audit.id)">
+            <div class="audit-header">
+              <span class="audit-status-badge" [class]="getScoreClass(audit.score)">
+                {{ getStatusLabel(audit.score) }}
+              </span>
+              <span class="audit-title">{{ audit.title }}</span>
+              @if (audit.displayValue) {
+                <span class="audit-value">{{ audit.displayValue }}</span>
+              }
+              <span class="audit-chevron">{{ expandedId() === audit.id ? '▾' : '▸' }}</span>
+            </div>
+            @if (expandedId() === audit.id) {
+              <div class="audit-details">
+                <p class="audit-desc">{{ stripHtml(audit.description) }}</p>
+                @if (audit.details?.items) {
+                  <table class="details-table">
+                    <tbody>
+                      @for (item of audit.details.items.slice(0, 10); track $index) {
+                        <tr>
+                          <td>{{ item.url || item.source || item.label || 'Item' }}</td>
+                          <td>{{ item.wastedBytes ? formatSize(item.wastedBytes) + ' savings' : item.totalBytes ? formatSize(item.totalBytes) : '' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            }
+          </div>
+        }
+        @if (audits.length === 0) {
+          <p class="empty">No performance issues detected.</p>
+        }
+      </div>
+    </div>
+  `,
+  styles: [`
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+    .audit-list { display: flex; flex-direction: column; gap: 8px; }
+    .audit-item { padding: 14px; cursor: pointer; transition: all 0.15s; }
+    .audit-item:hover { box-shadow: var(--shadow-lg); }
+    .audit-header { display: flex; align-items: center; gap: 10px; }
+    .audit-status-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+    .audit-status-badge.good { background: rgba(12,206,107,0.12); color: var(--score-good); }
+    .audit-status-badge.average { background: rgba(255,164,0,0.12); color: var(--score-average); }
+    .audit-status-badge.poor { background: rgba(255,78,66,0.12); color: var(--score-poor); }
+    .audit-title { flex: 1; font-size: 13px; font-weight: 500; }
+    .audit-value { font-size: 12px; color: var(--text-secondary); }
+    .audit-chevron { color: var(--text-secondary); font-size: 12px; }
+    .audit-details { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+    .audit-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px; }
+    .details-table { width: 100%; font-size: 11px; }
+    .details-table td { padding: 4px 8px; border-bottom: 1px solid var(--border-color); }
+    .details-table td:first-child { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .details-table td:last-child { text-align: right; color: var(--score-average); white-space: nowrap; }
+    .empty { font-size: 13px; color: var(--text-secondary); text-align: center; padding: 40px; }
+  `]
+})
+export class PerformanceAnalysisComponent {
+  @Input() audits: PerformanceAudit[] = [];
+  expandedId = signal<string | null>(null);
+
+  toggle(id: string): void {
+    this.expandedId.set(this.expandedId() === id ? null : id);
+  }
+
+  getScoreClass(score: number | null): string {
+    if (score === null) return 'average';
+    if (score >= 0.9) return 'good';
+    if (score >= 0.5) return 'average';
+    return 'poor';
+  }
+
+  getStatusLabel(score: number | null): string {
+    if (score === null) return 'Info';
+    if (score >= 0.9) return 'Passed';
+    if (score >= 0.5) return 'Needs Work';
+    return 'Critical';
+  }
+
+  stripHtml(text: string): string {
+    return text?.replace(/<[^>]*>/g, '') || '';
+  }
+
+  formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
+  }
+}
