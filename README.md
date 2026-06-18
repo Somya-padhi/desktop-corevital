@@ -4,13 +4,14 @@ A desktop application for auditing VPN-restricted internal websites locally. Pro
 
 ## How It Works
 
-CoreVitals runs the same Lighthouse engine that powers [pagespeed.web.dev](https://pagespeed.web.dev/), but entirely on your local machine. This means you can audit internal/VPN-restricted sites that cloud-based tools can't reach.
+CoreVitals runs the same Lighthouse engine locally on your machine. This means you can audit internal/VPN-restricted sites that cloud-based tools can't reach.
 
 ```
 chrome-launcher → launches local Chrome with --remote-debugging-port
-lighthouse(url, { port }) → runs full PSI audit via Chrome DevTools Protocol
+lighthouse(url, { port }) → runs full audit via Chrome DevTools Protocol
 @axe-core/playwright → deep accessibility scan after Lighthouse finishes
 playwright → security header checks + mixed content detection
+tracium + CDP tracing → deep diagnostics (long tasks, LCP attribution, CLS sources)
 ```
 
 ## Tech Stack
@@ -24,6 +25,8 @@ playwright → security header checks + mixed content detection
 | Performance Audit | Lighthouse Node API + chrome-launcher |
 | Accessibility | @axe-core/playwright |
 | Page Analysis | Playwright |
+| Trace Analysis | tracium + CDP |
+| Third-Party Detection | third-party-web |
 | PDF Export | Electron printToPDF |
 
 ## Prerequisites
@@ -80,9 +83,9 @@ Uses electron-builder to produce a distributable installer for your platform.
 
 ### Audit Engine
 - **Lighthouse Node API** — industry-standard performance metrics engine
-- Configurable throttling: No Throttling, Simulated (PSI default), Applied Slow 4G, Applied Fast 4G
+- Configurable throttling: No Throttling, Simulated (default), Applied Slow 4G, Applied Fast 4G
 - Device emulation: Desktop, Tablet, Mobile
-- `throttlingMethod: 'simulate'` matches PSI behavior exactly
+- `throttlingMethod: 'simulate'` matches industry-standard Lighthouse scoring behavior
 
 ### Multi-Tab Support
 - Run multiple audits and keep all results open
@@ -97,6 +100,7 @@ Uses electron-builder to produce a distributable installer for your platform.
 - **SEO** — Meta descriptions, title tags, canonical URLs, crawlability, structured data
 - **Security** — Missing headers (CSP, HSTS, X-Frame-Options, etc.), mixed content, HTTPS status
 - **Quality** — Deprecated APIs, console errors, image aspect ratios, HTTP/2 usage
+- **Diagnostics** — Trace-level deep analysis: long tasks with script attribution, LCP element identification and render delay, LCP discoverability (HTML vs JS-injected), layout shift sources with element identity, third-party blocking impact
 - **Recommendations** — Prioritized list from all categories, filterable by type, with severity and fix suggestions
 
 ### Core Web Vitals Measured
@@ -127,8 +131,9 @@ corevitals/
 │   ├── main.js              # Electron main process
 │   ├── preload.js           # Context bridge (IPC)
 │   └── ipc/
-│       ├── audit-handler.js # chrome-launcher + lighthouse + playwright
-│       └── pdf-handler.js   # PDF report generation
+│       ├── audit-handler.js      # chrome-launcher + lighthouse + playwright
+│       ├── diagnostics-handler.js # CDP tracing + tracium + web-vitals attribution
+│       └── pdf-handler.js        # PDF report generation
 ├── src/
 │   ├── index.html
 │   ├── main.ts
@@ -146,6 +151,7 @@ corevitals/
 │       │   ├── dashboard/
 │       │   ├── resource-analysis/
 │       │   ├── performance-analysis/
+│       │   ├── diagnostics/
 │       │   ├── accessibility-analysis/
 │       │   ├── seo-analysis/
 │       │   ├── security-analysis/
@@ -172,15 +178,15 @@ corevitals/
 
 ## Why Accurate Performance Metrics?
 
-The audit uses the exact same approach PSI uses:
+The audit uses the exact same Lighthouse engine and scoring methodology used by Google's cloud tools:
 
 1. Chrome is launched locally via `chrome-launcher`
 2. Lighthouse connects to Chrome's DevTools port
 3. Lighthouse handles all metric collection internally (network interception, trace recording, paint timing)
-4. Simulated throttling (`throttlingMethod: 'simulate'`) applies the same network/CPU models as PSI
+4. Simulated throttling (`throttlingMethod: 'simulate'`) applies the same network/CPU models as Lighthouse's standard configuration
 5. Scores are calculated using Lighthouse's built-in scoring curves
 
-The only difference is the network path — your machine fetches the page directly instead of Google's servers doing it. For internal/VPN sites, this is the only way to get accurate Lighthouse scores.
+The only difference is the network path — your machine fetches the page directly instead of a remote server doing it. For internal/VPN sites, this is the only way to get accurate Lighthouse scores.
 
 ## License
 
