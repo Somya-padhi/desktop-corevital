@@ -18,7 +18,9 @@
     "chrome-launcher": "^1.1.0",
     "lighthouse": "^12.0.0",
     "playwright": "^1.45.0",
-    "@axe-core/playwright": "^4.9.0"
+    "@axe-core/playwright": "^4.9.0",
+    "tracium": "^0.2.1",
+    "third-party-web": "^0.29.2"
   },
   "devDependencies": {
     "@angular/cli": "^19.0.0",

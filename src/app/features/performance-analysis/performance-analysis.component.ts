@@ -25,13 +25,13 @@ import { PerformanceAudit } from '../../core/models/audit.models';
             @if (expandedId() === audit.id) {
               <div class="audit-details">
                 <p class="audit-desc">{{ stripHtml(audit.description) }}</p>
-                @if (audit.details?.items) {
+                @if (getDetailRows(audit).length > 0) {
                   <table class="details-table">
                     <tbody>
-                      @for (item of audit.details.items.slice(0, 10); track $index) {
+                      @for (row of getDetailRows(audit); track $index) {
                         <tr>
-                          <td>{{ item.url || item.source || item.label || 'Item' }}</td>
-                          <td>{{ item.wastedBytes ? formatSize(item.wastedBytes) + ' savings' : item.totalBytes ? formatSize(item.totalBytes) : '' }}</td>
+                          <td [title]="row.primary">{{ row.primary }}</td>
+                          <td>{{ row.secondary }}</td>
                         </tr>
                       }
                     </tbody>
@@ -99,5 +99,32 @@ export class PerformanceAnalysisComponent {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / 1048576).toFixed(1)} MB`;
+  }
+
+  getDetailRows(audit: PerformanceAudit): { primary: string; secondary: string }[] {
+    if (!audit.details?.items) return [];
+    return audit.details.items.slice(0, 10).map((item: any) => ({
+      primary: this.extractPrimary(item),
+      secondary: this.extractSecondary(item)
+    })).filter((r: any) => r.primary !== 'Item');
+  }
+
+  private extractPrimary(item: any): string {
+    if (item.url && typeof item.url === 'string') return item.url;
+    if (item.source) {
+      if (typeof item.source === 'object') return item.source.url || item.source.snippet || '';
+      return item.source;
+    }
+    if (item.node) return item.node.snippet || item.node.nodeLabel || item.node.selector || '';
+    if (item.label) return item.label;
+    if (item.description && typeof item.description === 'string') return item.description;
+    return 'Item';
+  }
+
+  private extractSecondary(item: any): string {
+    if (item.wastedBytes) return this.formatSize(item.wastedBytes) + ' savings';
+    if (item.totalBytes) return this.formatSize(item.totalBytes);
+    if (item.wastedMs) return `${item.wastedMs.toFixed(0)} ms wasted`;
+    return '';
   }
 }

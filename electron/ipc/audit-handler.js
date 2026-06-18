@@ -1,5 +1,6 @@
 const path = require('path');
 const { ipcMain, BrowserWindow } = require('electron');
+const { runDiagnostics } = require('./diagnostics-handler');
 
 let chromeLauncher;
 let lighthouse;
@@ -202,7 +203,8 @@ function extractMetrics(lhr) {
     performanceAudits: extractPerformanceAudits(lhr),
     seoAudits: extractSEOAudits(lhr),
     bestPracticesAudits: extractBestPracticesAudits(lhr),
-    resourceSummary: extractResourceSummary(lhr)
+    resourceSummary: extractResourceSummary(lhr),
+    individualResources: extractIndividualResources(lhr)
   };
 }
 
@@ -266,6 +268,23 @@ function extractResourceSummary(lhr) {
   }));
 }
 
+function extractIndividualResources(lhr) {
+  const audit = lhr.audits['network-requests'];
+  if (!audit || !audit.details || !audit.details.items) return [];
+  return audit.details.items
+    .filter(item => item.transferSize > 0)
+    .map(item => ({
+      url: item.url,
+      resourceType: item.resourceType || 'Other',
+      transferSize: item.transferSize || 0,
+      resourceSize: item.resourceSize || 0,
+      statusCode: item.statusCode || 0,
+      mimeType: item.mimeType || '',
+      protocol: item.protocol || ''
+    }))
+    .sort((a, b) => b.transferSize - a.transferSize);
+}
+
 // Register IPC handlers immediately (no async module loading needed at registration time)
 ipcMain.handle('audit:run', async (_event, config) => {
   try {
@@ -287,6 +306,15 @@ ipcMain.handle('audit:run', async (_event, config) => {
     const security = await runSecurityAudit(config.url);
     if (currentAudit.cancelled) return { error: 'Audit cancelled' };
 
+    // Run deep diagnostics (non-blocking — failures are captured gracefully)
+    sendProgress('Running deep diagnostics...', 80, 'Collecting trace-level performance insights');
+    let diagnostics = null;
+    try {
+      diagnostics = await runDiagnostics(config.url, playwright);
+    } catch (e) {
+      diagnostics = { error: `Diagnostics failed: ${e.message}`, partial: null, retryable: true };
+    }
+
     sendProgress('Audit complete!', 100, 'All checks finished');
 
     return {
@@ -298,6 +326,7 @@ ipcMain.handle('audit:run', async (_event, config) => {
       metrics,
       accessibility,
       security,
+      diagnostics,
       lighthouseVersion: lhr.lighthouseVersion,
       fetchTime: lhr.fetchTime
     };

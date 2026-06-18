@@ -49,6 +49,16 @@ export interface ResourceItem {
   transferSize: number;
 }
 
+export interface IndividualResource {
+  url: string;
+  resourceType: string;
+  transferSize: number;
+  resourceSize: number;
+  statusCode: number;
+  mimeType: string;
+  protocol: string;
+}
+
 export interface AuditMetrics {
   scores: AuditScores;
   coreWebVitals: CoreWebVitals;
@@ -56,6 +66,7 @@ export interface AuditMetrics {
   seoAudits: PerformanceAudit[];
   bestPracticesAudits: PerformanceAudit[];
   resourceSummary: ResourceItem[];
+  individualResources: IndividualResource[];
 }
 
 export interface AccessibilityViolation {
@@ -98,8 +109,63 @@ export interface AuditResult {
   metrics: AuditMetrics;
   accessibility: AccessibilityResult;
   security: SecurityResult;
+  diagnostics: DiagnosticsResult | null;
   lighthouseVersion: string;
   fetchTime: string;
+}
+
+export interface DiagnosticsResult {
+  data?: DiagnosticsData;
+  partial?: DiagnosticsData | null;
+  error?: string;
+  warnings?: string[];
+  retryable?: boolean;
+}
+
+export interface DiagnosticsData {
+  longTasks: LongTask[];
+  lcpAttribution: LcpAttribution | null;
+  layoutShifts: LayoutShiftEntry[];
+  thirdPartyBlocking: ThirdPartyRequest[];
+  lcpDiscoverability: LcpDiscoverability | null;
+  traceWarnings: string[];
+}
+
+export interface LongTask {
+  duration: number;
+  startTime: number;
+  attribution: string;
+  kind: string;
+}
+
+export interface LcpAttribution {
+  element: string | null;
+  url: string | null;
+  renderTime: number;
+  loadTime: number;
+  size: number;
+  renderDelay: number | null;
+}
+
+export interface LayoutShiftEntry {
+  value: number;
+  sources: { node: string; previousRect: string | null; currentRect: string | null }[];
+}
+
+export interface ThirdPartyRequest {
+  url: string;
+  duration: number;
+  transferSize: number;
+  initiatorType: string;
+  renderBlocking: string;
+  entity: string;
+  startTime: number;
+}
+
+export interface LcpDiscoverability {
+  url: string | null;
+  inInitialHtml: boolean | null;
+  recommendation: string;
 }
 
 export interface AuditTab {
