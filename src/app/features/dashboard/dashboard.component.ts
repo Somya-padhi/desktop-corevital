@@ -13,8 +13,9 @@ import { SeoAnalysisComponent } from '../seo-analysis/seo-analysis.component';
 import { SecurityAnalysisComponent } from '../security-analysis/security-analysis.component';
 import { QualityAnalysisComponent } from '../quality-analysis/quality-analysis.component';
 import { RecommendationsComponent } from '../recommendations/recommendations.component';
+import { DiagnosticsComponent } from '../diagnostics/diagnostics.component';
 
-type Section = 'summary' | 'resources' | 'performance' | 'accessibility' | 'seo' | 'security' | 'quality' | 'recommendations';
+type Section = 'summary' | 'resources' | 'performance' | 'diagnostics' | 'accessibility' | 'seo' | 'security' | 'quality' | 'recommendations';
 
 @Component({
   selector: 'app-dashboard',
@@ -22,7 +23,7 @@ type Section = 'summary' | 'resources' | 'performance' | 'accessibility' | 'seo'
   imports: [
     CommonModule, FormsModule, ScoreGaugeComponent, MetricCardComponent,
     ResourceAnalysisComponent, PerformanceAnalysisComponent, AccessibilityAnalysisComponent,
-    SeoAnalysisComponent, SecurityAnalysisComponent, QualityAnalysisComponent, RecommendationsComponent
+    SeoAnalysisComponent, SecurityAnalysisComponent, QualityAnalysisComponent, RecommendationsComponent, DiagnosticsComponent
   ],
   template: `
     <div class="dashboard">
@@ -120,8 +121,9 @@ type Section = 'summary' | 'resources' | 'performance' | 'accessibility' | 'seo'
               }
             </section>
           }
-          @case ('resources') { <app-resource-analysis [resources]="result()!.metrics.resourceSummary" /> }
+          @case ('resources') { <app-resource-analysis [resources]="result()!.metrics.resourceSummary" [individualResources]="result()!.metrics.individualResources || []" /> }
           @case ('performance') { <app-performance-analysis [audits]="result()!.metrics.performanceAudits" /> }
+          @case ('diagnostics') { <app-diagnostics [data]="result()!.diagnostics" /> }
           @case ('accessibility') { <app-accessibility-analysis [data]="result()!.accessibility" /> }
           @case ('seo') { <app-seo-analysis [audits]="result()!.metrics.seoAudits" /> }
           @case ('security') { <app-security-analysis [data]="result()!.security" /> }
@@ -222,6 +224,7 @@ export class DashboardComponent {
     { id: 'summary', label: 'Summary' },
     { id: 'resources', label: 'Resources' },
     { id: 'performance', label: 'Performance' },
+    { id: 'diagnostics', label: 'Diagnostics' },
     { id: 'accessibility', label: 'Accessibility' },
     { id: 'seo', label: 'SEO' },
     { id: 'security', label: 'Security' },
