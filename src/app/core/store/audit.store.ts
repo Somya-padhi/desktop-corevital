@@ -5,11 +5,14 @@ import { AuditTab, AuditConfig, AuditProgress, AuditResult } from '../models/aud
 export class AuditStore {
   tabs = signal<AuditTab[]>([]);
   activeTabId = signal<string | null>(null);
+  compareMode = signal<boolean>(false);
 
   activeTab = computed(() => {
     const id = this.activeTabId();
     return this.tabs().find(t => t.id === id) || null;
   });
+
+  completedTabs = computed(() => this.tabs().filter(t => t.status === 'complete'));
 
   createTab(config: AuditConfig): string {
     const id = crypto.randomUUID();
